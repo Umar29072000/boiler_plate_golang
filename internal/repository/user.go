@@ -2,49 +2,146 @@ package repository
 
 import (
 	"context"
+	"errors"
+	"math"
 
 	"boiler_plate_be_golang/app/config"
+	"boiler_plate_be_golang/internal/rest/response"
 	model "boiler_plate_be_golang/pkg/model/database"
 
 	"gorm.io/gorm"
 )
 
+// DTOs for repository operations
+type GetUserData struct {
+	Page                  int    `json:"page"`
+	Limit                 int    `json:"limit"`
+	Field                 string `json:"field"`
+	Sort                  string `json:"sort"`
+	Search                string `json:"search"`
+	DisableCalculateTotal string `json:"disableCalculateTotal"`
+	ID                    string `json:"id"`
+	Email                 string `json:"email"`
+	PhoneNumber           string `json:"phoneNumber"`
+}
+
+type CreateUserData struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Role     string `json:"role"`
+}
+
+type UpdateUserData struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
+}
+
 // IUserRepository defines user repository interface
 type IUserRepository interface {
-	Create(ctx context.Context, user *model.User) error
+	Show(ctx context.Context, req GetUserData) (res response.PaginationResponse, err error)
+	Create(ctx context.Context, req CreateUserData) (*model.User, error)
 	FindByEmail(ctx context.Context, email string) (*model.User, error)
 	FindByID(ctx context.Context, id string) (*model.User, error)
-	FindAll(ctx context.Context, limit, offset int) ([]model.User, error)
-	Update(ctx context.Context, user *model.User) error
+	Update(ctx context.Context, req UpdateUserData) (*model.User, error)
 	Delete(ctx context.Context, id string) error
-	Count(ctx context.Context) (int64, error)
 	FindByVerificationToken(ctx context.Context, token string) (*model.User, error)
 	FindByResetToken(ctx context.Context, token string) (*model.User, error)
 }
 
 // UserRepository handles user data access
 type UserRepository struct {
-	db        *gorm.DB
+	DB        *gorm.DB
 	AppConfig config.App
 }
 
 // NewUserRepository creates new user repository
 func NewUserRepository(db *gorm.DB, appConfig config.App) *UserRepository {
 	return &UserRepository{
-		db:        db,
+		DB:        db,
 		AppConfig: appConfig,
 	}
 }
 
+// Show gets users with pagination
+func (r *UserRepository) Show(ctx context.Context, req GetUserData) (res response.PaginationResponse, err error) {
+	var users []model.User
+	var total int64
+
+	query := r.DB.WithContext(ctx).Model(&model.User{})
+
+	// Apply filters
+	if req.ID != "" {
+		query = query.Where("id = ?", req.ID)
+	}
+	if req.Email != "" {
+		query = query.Where("email = ?", req.Email)
+	}
+	if req.Search != "" {
+		query = query.Where("name LIKE ? OR email LIKE ?", "%"+req.Search+"%", "%"+req.Search+"%")
+	}
+
+	// Count total items if not disabled
+	if req.DisableCalculateTotal != "true" {
+		if err = query.Count(&total).Error; err != nil {
+			return res, err
+		}
+	}
+
+	// Apply sorting
+	if req.Field != "" && req.Sort != "" {
+		query = query.Order(req.Field + " " + req.Sort)
+	} else {
+		query = query.Order("created_at desc")
+	}
+
+	// Apply pagination
+	if req.Page > 0 && req.Limit > 0 {
+		offset := (req.Page - 1) * req.Limit
+		query = query.Offset(offset).Limit(req.Limit)
+	}
+
+	if err = query.Find(&users).Error; err != nil {
+		return res, err
+	}
+
+	// Calculate total pages
+	var totalPages int64
+	if req.Limit > 0 {
+		totalPages = int64(math.Ceil(float64(total) / float64(req.Limit)))
+	}
+
+	res = response.PaginationResponse{
+		Items:      users,
+		TotalItems: total,
+		TotalPages: totalPages,
+		Page:       int64(req.Page),
+		Limit:      int64(req.Limit),
+	}
+
+	return res, nil
+}
+
 // Create creates a new user
-func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
-	return r.db.WithContext(ctx).Create(user).Error
+func (r *UserRepository) Create(ctx context.Context, req CreateUserData) (*model.User, error) {
+	user := &model.User{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: req.Password,
+		Role:     req.Role,
+	}
+	if err := r.DB.WithContext(ctx).Create(user).Error; err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 // FindByEmail finds user by email
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
-	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	err := r.DB.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
@@ -54,41 +151,56 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.
 // FindByID finds user by ID
 func (r *UserRepository) FindByID(ctx context.Context, id string) (*model.User, error) {
 	var user model.User
-	err := r.db.WithContext(ctx).Where("id = ?", id).First(&user).Error
+	err := r.DB.WithContext(ctx).Where("id = ?", id).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
 
-// FindAll finds all users with pagination
-func (r *UserRepository) FindAll(ctx context.Context, limit, offset int) ([]model.User, error) {
-	var users []model.User
-	err := r.db.WithContext(ctx).Limit(limit).Offset(offset).Find(&users).Error
-	return users, err
-}
-
 // Update updates user
-func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
-	return r.db.WithContext(ctx).Save(user).Error
+func (r *UserRepository) Update(ctx context.Context, req UpdateUserData) (*model.User, error) {
+	var user model.User
+	if err := r.DB.WithContext(ctx).Where("id = ?", req.ID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("USER_NOT_FOUND")
+		}
+		return nil, err
+	}
+
+	// Update fields
+	if req.Name != "" {
+		user.Name = req.Name
+	}
+	if req.Email != "" {
+		user.Email = req.Email
+	}
+	if req.Role != "" {
+		user.Role = req.Role
+	}
+
+	if err := r.DB.WithContext(ctx).Save(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 // Delete deletes user (soft delete)
 func (r *UserRepository) Delete(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).Delete(&model.User{}, "id = ?", id).Error
-}
-
-// Count counts total users
-func (r *UserRepository) Count(ctx context.Context) (int64, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Model(&model.User{}).Count(&count).Error
-	return count, err
+	result := r.DB.WithContext(ctx).Delete(&model.User{}, "id = ?", id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("USER_NOT_FOUND")
+	}
+	return nil
 }
 
 // FindByVerificationToken finds user by email verification token
 func (r *UserRepository) FindByVerificationToken(ctx context.Context, token string) (*model.User, error) {
 	var user model.User
-	err := r.db.WithContext(ctx).Where("email_verification_token = ?", token).First(&user).Error
+	err := r.DB.WithContext(ctx).Where("email_verification_token = ?", token).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +210,7 @@ func (r *UserRepository) FindByVerificationToken(ctx context.Context, token stri
 // FindByResetToken finds user by password reset token
 func (r *UserRepository) FindByResetToken(ctx context.Context, token string) (*model.User, error) {
 	var user model.User
-	err := r.db.WithContext(ctx).Where("password_reset_token = ?", token).First(&user).Error
+	err := r.DB.WithContext(ctx).Where("password_reset_token = ?", token).First(&user).Error
 	if err != nil {
 		return nil, err
 	}

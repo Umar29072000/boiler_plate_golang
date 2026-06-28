@@ -2,199 +2,374 @@ package rest
 
 import (
 	"net/http"
+	"strings"
 
 	"boiler_plate_be_golang/domains"
+	"boiler_plate_be_golang/internal/rest/request"
+	"boiler_plate_be_golang/internal/rest/response"
 	"boiler_plate_be_golang/internal/service"
-	"boiler_plate_be_golang/pkg/logger"
+	model "boiler_plate_be_golang/pkg/model/database"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/sirupsen/logrus"
 )
 
-// AuthHandler handles authentication requests
-type AuthHandler struct {
+// authHandler handles authentication requests
+type authHandler struct {
 	AuthService service.IAuthService
 }
 
 // InitAuthHandler initializes auth routes
 func InitAuthHandler(e fiber.Router, authService service.IAuthService) {
-	handler := &AuthHandler{
+	handler := &authHandler{
 		AuthService: authService,
 	}
 
 	authGroup := e.Group("/auth")
 	authGroup.Post("/register", handler.Register)
 	authGroup.Post("/login", handler.Login)
-	authGroup.Post("/refresh", handler.RefreshToken)
 	authGroup.Get("/verify/:token", handler.VerifyEmail)
 	authGroup.Post("/forgot-password", handler.ForgotPassword)
 	authGroup.Post("/reset-password", handler.ResetPassword)
 }
 
 // Register handles user registration
-func (h *AuthHandler) Register(c *fiber.Ctx) error {
-	ctx := c.Context()
-	loggerCtx := logger.GetLoggerContext(ctx, "AuthHandler.Register")
+func (h *authHandler) Register(c *fiber.Ctx) error {
+	var (
+		tag string = "internal.rest.auth.Register."
+		req request.RegisterRequest
+	)
 
-	var req domains.RegisterRequest
+	// Bind request body
 	if err := c.BodyParser(&req); err != nil {
-		loggerCtx.Errorf("Error parsing request: %v", err)
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"code":    http.StatusBadRequest,
-			"message": "INVALID_REQUEST",
-			"data":    nil,
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "01",
+			"error": err.Error(),
+		}).Error("bad request")
+
+		return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+			Code:    http.StatusBadRequest,
+			Message: strings.ToUpper(strings.ReplaceAll(http.StatusText(http.StatusBadRequest), " ", "_")),
+			Data:    nil,
 		})
 	}
 
-	// TODO: Add validation
-	res, err := h.AuthService.Register(ctx, req)
+	// Validate request
+	if err := req.Validate(); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "02",
+			"error": err.Error(),
+		}).Error("invalid validation")
+
+		return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+			Code:    http.StatusBadRequest,
+			Message: "INVALID_VALIDATION",
+			Data:    err,
+		})
+	}
+
+	// Call service
+	user, token, err := h.AuthService.Register(c.Context(), req.Name, req.Email, req.Password)
 	if err != nil {
-		loggerCtx.Errorf("Error registering user: %v", err)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"code":    http.StatusInternalServerError,
-			"message": "INTERNAL_SERVER_ERROR",
-			"data":    nil,
-		})
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "03",
+			"error": err.Error(),
+		}).Error("failed to register user (from auth service)")
+
+		switch err.Error() {
+		case "EMAIL_FOUND":
+			return c.Status(http.StatusConflict).JSON(response.BaseResponse{
+				Code:    http.StatusConflict,
+				Message: "EMAIL_ALREADY_EXISTS",
+				Data:    nil,
+			})
+		default:
+			return c.Status(http.StatusInternalServerError).JSON(response.BaseResponse{
+				Code:    http.StatusInternalServerError,
+				Message: strings.ToUpper(strings.ReplaceAll(http.StatusText(http.StatusInternalServerError), " ", "_")),
+				Data:    nil,
+			})
+		}
 	}
 
-	return c.Status(res.Code).JSON(res)
+	return c.Status(http.StatusCreated).JSON(response.BaseResponse{
+		Code:    http.StatusCreated,
+		Message: "USER_REGISTERED",
+		Data: map[string]interface{}{
+			"user":  mapToUserResponse(user),
+			"token": token,
+		},
+	})
 }
 
 // Login handles user login
-func (h *AuthHandler) Login(c *fiber.Ctx) error {
-	ctx := c.Context()
-	loggerCtx := logger.GetLoggerContext(ctx, "AuthHandler.Login")
+func (h *authHandler) Login(c *fiber.Ctx) error {
+	var (
+		tag string = "internal.rest.auth.Login."
+		req request.LoginRequest
+	)
 
-	var req domains.LoginRequest
+	// Bind request body
 	if err := c.BodyParser(&req); err != nil {
-		loggerCtx.Errorf("Error parsing request: %v", err)
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"code":    http.StatusBadRequest,
-			"message": "INVALID_REQUEST",
-			"data":    nil,
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "01",
+			"error": err.Error(),
+		}).Error("bad request")
+
+		return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+			Code:    http.StatusBadRequest,
+			Message: strings.ToUpper(strings.ReplaceAll(http.StatusText(http.StatusBadRequest), " ", "_")),
+			Data:    nil,
 		})
 	}
 
-	res, err := h.AuthService.Login(ctx, req)
+	// Validate request
+	if err := req.Validate(); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "02",
+			"error": err.Error(),
+		}).Error("invalid validation")
+
+		return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+			Code:    http.StatusBadRequest,
+			Message: "INVALID_VALIDATION",
+			Data:    err,
+		})
+	}
+
+	// Call service
+	user, token, err := h.AuthService.Login(c.Context(), req.Email, req.Password)
 	if err != nil {
-		loggerCtx.Errorf("Error logging in: %v", err)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"code":    http.StatusInternalServerError,
-			"message": "INTERNAL_SERVER_ERROR",
-			"data":    nil,
-		})
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "03",
+			"error": err.Error(),
+		}).Error("failed to login (from auth service)")
+
+		switch err.Error() {
+		case "INVALID_CREDENTIALS":
+			return c.Status(http.StatusUnauthorized).JSON(response.BaseResponse{
+				Code:    http.StatusUnauthorized,
+				Message: "INVALID_CREDENTIALS",
+				Data:    nil,
+			})
+		default:
+			return c.Status(http.StatusInternalServerError).JSON(response.BaseResponse{
+				Code:    http.StatusInternalServerError,
+				Message: strings.ToUpper(strings.ReplaceAll(http.StatusText(http.StatusInternalServerError), " ", "_")),
+				Data:    nil,
+			})
+		}
 	}
 
-	return c.Status(res.Code).JSON(res)
+	return c.Status(http.StatusOK).JSON(response.BaseResponse{
+		Code:    http.StatusOK,
+		Message: "LOGIN_SUCCESS",
+		Data: map[string]interface{}{
+			"user":  mapToUserResponse(user),
+			"token": token,
+		},
+	})
 }
 
-// RefreshToken handles token refresh
-func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
-	ctx := c.Context()
-	loggerCtx := logger.GetLoggerContext(ctx, "AuthHandler.RefreshToken")
 
-	var req domains.RefreshTokenRequest
-	if err := c.BodyParser(&req); err != nil {
-		loggerCtx.Errorf("Error parsing request: %v", err)
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"code":    http.StatusBadRequest,
-			"message": "INVALID_REQUEST",
-			"data":    nil,
-		})
-	}
-
-	res, err := h.AuthService.RefreshToken(ctx, req)
-	if err != nil {
-		loggerCtx.Errorf("Error refreshing token: %v", err)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"code":    http.StatusInternalServerError,
-			"message": "INTERNAL_SERVER_ERROR",
-			"data":    nil,
-		})
-	}
-
-	return c.Status(res.Code).JSON(res)
-}
 
 // VerifyEmail handles email verification
-func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
-	ctx := c.Context()
-	loggerCtx := logger.GetLoggerContext(ctx, "AuthHandler.VerifyEmail")
+func (h *authHandler) VerifyEmail(c *fiber.Ctx) error {
+	var (
+		tag string = "internal.rest.auth.VerifyEmail."
+		req request.VerifyEmailRequest
+	)
 
-	token := c.Params("token")
-	if token == "" {
-		loggerCtx.Error("token parameter is missing")
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"code":    http.StatusBadRequest,
-			"message": "INVALID_REQUEST",
-			"data":    nil,
+	// Bind path params
+	req.Token = c.Params("token")
+
+	// Validate request
+	if err := req.Validate(); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "01",
+			"error": err.Error(),
+		}).Error("invalid validation")
+
+		return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+			Code:    http.StatusBadRequest,
+			Message: "INVALID_VALIDATION",
+			Data:    err,
 		})
 	}
 
-	res, err := h.AuthService.VerifyEmail(ctx, token)
-	if err != nil {
-		loggerCtx.Errorf("Error verifying email: %v", err)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"code":    http.StatusInternalServerError,
-			"message": "INTERNAL_SERVER_ERROR",
-			"data":    nil,
-		})
+	// Call service
+	if err := h.AuthService.VerifyEmail(c.Context(), req.Token); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "02",
+			"error": err.Error(),
+		}).Error("failed to verify email (from auth service)")
+
+		switch err.Error() {
+		case "INVALID_VERIFICATION_TOKEN":
+			return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+				Code:    http.StatusBadRequest,
+				Message: "INVALID_VERIFICATION_TOKEN",
+				Data:    nil,
+			})
+		case "VERIFICATION_TOKEN_EXPIRED":
+			return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+				Code:    http.StatusBadRequest,
+				Message: "VERIFICATION_TOKEN_EXPIRED",
+				Data:    nil,
+			})
+		default:
+			return c.Status(http.StatusInternalServerError).JSON(response.BaseResponse{
+				Code:    http.StatusInternalServerError,
+				Message: strings.ToUpper(strings.ReplaceAll(http.StatusText(http.StatusInternalServerError), " ", "_")),
+				Data:    nil,
+			})
+		}
 	}
 
-	return c.Status(res.Code).JSON(res)
+	return c.Status(http.StatusOK).JSON(response.BaseResponse{
+		Code:    http.StatusOK,
+		Message: "EMAIL_VERIFIED",
+		Data:    nil,
+	})
 }
 
 // ForgotPassword handles forgot password request
-func (h *AuthHandler) ForgotPassword(c *fiber.Ctx) error {
-	ctx := c.Context()
-	loggerCtx := logger.GetLoggerContext(ctx, "AuthHandler.ForgotPassword")
+func (h *authHandler) ForgotPassword(c *fiber.Ctx) error {
+	var (
+		tag string = "internal.rest.auth.ForgotPassword."
+		req request.ForgotPasswordRequest
+	)
 
-	var req domains.ForgotPasswordRequest
+	// Bind request body
 	if err := c.BodyParser(&req); err != nil {
-		loggerCtx.Errorf("Error parsing request: %v", err)
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"code":    http.StatusBadRequest,
-			"message": "INVALID_REQUEST",
-			"data":    nil,
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "01",
+			"error": err.Error(),
+		}).Error("bad request")
+
+		return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+			Code:    http.StatusBadRequest,
+			Message: strings.ToUpper(strings.ReplaceAll(http.StatusText(http.StatusBadRequest), " ", "_")),
+			Data:    nil,
 		})
 	}
 
-	res, err := h.AuthService.ForgotPassword(ctx, req.Email)
-	if err != nil {
-		loggerCtx.Errorf("Error processing forgot password: %v", err)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"code":    http.StatusInternalServerError,
-			"message": "INTERNAL_SERVER_ERROR",
-			"data":    nil,
+	// Validate request
+	if err := req.Validate(); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "02",
+			"error": err.Error(),
+		}).Error("invalid validation")
+
+		return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+			Code:    http.StatusBadRequest,
+			Message: "INVALID_VALIDATION",
+			Data:    err,
 		})
 	}
 
-	return c.Status(res.Code).JSON(res)
+	// Call service
+	if err := h.AuthService.ForgotPassword(c.Context(), req.Email); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "03",
+			"error": err.Error(),
+		}).Error("failed to process forgot password (from auth service)")
+
+		return c.Status(http.StatusInternalServerError).JSON(response.BaseResponse{
+			Code:    http.StatusInternalServerError,
+			Message: strings.ToUpper(strings.ReplaceAll(http.StatusText(http.StatusInternalServerError), " ", "_")),
+			Data:    nil,
+		})
+	}
+
+	return c.Status(http.StatusOK).JSON(response.BaseResponse{
+		Code:    http.StatusOK,
+		Message: "PASSWORD_RESET_EMAIL_SENT",
+		Data:    nil,
+	})
 }
 
 // ResetPassword handles password reset
-func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
-	ctx := c.Context()
-	loggerCtx := logger.GetLoggerContext(ctx, "AuthHandler.ResetPassword")
+func (h *authHandler) ResetPassword(c *fiber.Ctx) error {
+	var (
+		tag string = "internal.rest.auth.ResetPassword."
+		req request.ResetPasswordRequest
+	)
 
-	var req domains.ResetPasswordRequest
+	// Bind request body
 	if err := c.BodyParser(&req); err != nil {
-		loggerCtx.Errorf("Error parsing request: %v", err)
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"code":    http.StatusBadRequest,
-			"message": "INVALID_REQUEST",
-			"data":    nil,
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "01",
+			"error": err.Error(),
+		}).Error("bad request")
+
+		return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+			Code:    http.StatusBadRequest,
+			Message: strings.ToUpper(strings.ReplaceAll(http.StatusText(http.StatusBadRequest), " ", "_")),
+			Data:    nil,
 		})
 	}
 
-	res, err := h.AuthService.ResetPassword(ctx, req.Token, req.NewPassword)
-	if err != nil {
-		loggerCtx.Errorf("Error resetting password: %v", err)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"code":    http.StatusInternalServerError,
-			"message": "INTERNAL_SERVER_ERROR",
-			"data":    nil,
+	// Validate request
+	if err := req.Validate(); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "02",
+			"error": err.Error(),
+		}).Error("invalid validation")
+
+		return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+			Code:    http.StatusBadRequest,
+			Message: "INVALID_VALIDATION",
+			Data:    err,
 		})
 	}
 
-	return c.Status(res.Code).JSON(res)
+	// Call service
+	if err := h.AuthService.ResetPassword(c.Context(), req.Token, req.NewPassword); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"tag":   tag + "03",
+			"error": err.Error(),
+		}).Error("failed to reset password (from auth service)")
+
+		switch err.Error() {
+		case "INVALID_RESET_TOKEN":
+			return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+				Code:    http.StatusBadRequest,
+				Message: "INVALID_RESET_TOKEN",
+				Data:    nil,
+			})
+		case "RESET_TOKEN_EXPIRED":
+			return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+				Code:    http.StatusBadRequest,
+				Message: "RESET_TOKEN_EXPIRED",
+				Data:    nil,
+			})
+		default:
+			return c.Status(http.StatusInternalServerError).JSON(response.BaseResponse{
+				Code:    http.StatusInternalServerError,
+				Message: strings.ToUpper(strings.ReplaceAll(http.StatusText(http.StatusInternalServerError), " ", "_")),
+				Data:    nil,
+			})
+		}
+	}
+
+	return c.Status(http.StatusOK).JSON(response.BaseResponse{
+		Code:    http.StatusOK,
+		Message: "PASSWORD_RESET_SUCCESS",
+		Data:    nil,
+	})
+}
+
+// mapToUserResponse maps database model to domain response
+func mapToUserResponse(user *model.User) domains.UserResponse {
+	return domains.UserResponse{
+		ID:              user.ID,
+		Name:            user.Name,
+		Email:           user.Email,
+		Role:            user.Role,
+		IsEmailVerified: user.IsEmailVerified,
+		LastLogin:       user.LastLogin,
+		CreatedAt:       user.CreatedAt,
+		UpdatedAt:       user.UpdatedAt,
+	}
 }
