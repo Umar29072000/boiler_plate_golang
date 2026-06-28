@@ -1,6 +1,11 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+
+	postgresDriver "gorm.io/driver/postgres"
+	"gorm.io/gorm"
+)
 
 // Postgres represents PostgreSQL database configuration
 type Postgres struct {
@@ -25,4 +30,16 @@ func (c *Postgres) GetDSN() string {
 		c.SSLMode,
 		c.Timezone,
 	)
+}
+
+// OpenDatabaseConnection opens a PostgreSQL database connection
+func OpenDatabaseConnection(postgres Postgres) (*gorm.DB, error) {
+	dsn := postgres.GetDSN()
+	
+	db, err := gorm.Open(postgresDriver.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to postgresql database: %w", err)
+	}
+	
+	return db, nil
 }

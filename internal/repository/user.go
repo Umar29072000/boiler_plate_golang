@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"boiler_plate_be_golang/app/config"
 	model "boiler_plate_be_golang/pkg/model/database"
 
 	"gorm.io/gorm"
@@ -23,12 +24,16 @@ type IUserRepository interface {
 
 // UserRepository handles user data access
 type UserRepository struct {
-	db *gorm.DB
+	db        *gorm.DB
+	AppConfig config.App
 }
 
 // NewUserRepository creates new user repository
-func NewUserRepository(db *gorm.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(db *gorm.DB, appConfig config.App) *UserRepository {
+	return &UserRepository{
+		db:        db,
+		AppConfig: appConfig,
+	}
 }
 
 // Create creates a new user

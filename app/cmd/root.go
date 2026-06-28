@@ -15,9 +15,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	gormLog "gorm.io/gorm/logger"
 )
 
 var (
@@ -68,12 +66,9 @@ func initLogrus() {
 }
 
 func InitGorm(conf config.Postgres) {
-	connectionString := conf.GetDSN()
-
-	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{
-		Logger: gormLog.Default.LogMode(gormLog.Info),
-	})
-	if err != nil || db.Error != nil {
+	// Use helper function from config package (Localoka_V2 pattern)
+	db, err := config.OpenDatabaseConnection(conf)
+	if err != nil {
 		logger.Fatal("Failed to Initialize to Postgres").Err(err).Send()
 	}
 
@@ -112,7 +107,7 @@ func initRedis() {
 
 func initApp() {
 	// TODO: List of Repositories
-	userRepository := repository.NewUserRepository(DbGorm)
+	userRepository := repository.NewUserRepository(DbGorm, rootConfig.App)
 
 	// TODO: List of Services
 	userService = service.NewUserService(userRepository)

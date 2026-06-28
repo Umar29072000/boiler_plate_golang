@@ -1,7 +1,7 @@
 package email
 
 import (
-	"boiler_plate_be_golang/internal/config"
+	"boiler_plate_be_golang/app/config"
 	"bytes"
 	"crypto/tls"
 	"fmt"
@@ -13,21 +13,23 @@ import (
 
 // EmailService handles email sending
 type EmailService struct {
-	From     string
-	Host     string
-	Port     string
-	Username string
-	Password string
+	From      string
+	Host      string
+	Port      string
+	Username  string
+	Password  string
+	AppConfig config.App
 }
 
 // NewEmailService creates a new email service
-func NewEmailService() *EmailService {
+func NewEmailService(emailConfig config.Email, appConfig config.App) *EmailService {
 	return &EmailService{
-		From:     config.App.Email.From,
-		Host:     config.App.Email.Host,
-		Port:     config.App.Email.Port,
-		Username: config.App.Email.Username,
-		Password: config.App.Email.Password,
+		From:      emailConfig.From,
+		Host:      emailConfig.Host,
+		Port:      emailConfig.Port,
+		Username:  emailConfig.Username,
+		Password:  emailConfig.Password,
+		AppConfig: appConfig,
 	}
 }
 
@@ -65,7 +67,7 @@ func (s *EmailService) SendEmail(to, subject, htmlBody string) error {
 	addr := fmt.Sprintf("%s:%s", s.Host, s.Port)
 
 	// For production SMTP servers with TLS
-	if config.App.App.Env == "production" {
+	if s.AppConfig.Env == "production" {
 		// Setup TLS config
 		tlsconfig := &tls.Config{
 			InsecureSkipVerify: false,
@@ -129,8 +131,8 @@ func (s *EmailService) SendEmail(to, subject, htmlBody string) error {
 // RenderTemplate renders an email template with data
 func (s *EmailService) RenderTemplate(templateName string, data EmailData) (string, error) {
 	// Set default app info
-	data.AppName = config.App.App.Name
-	data.AppURL = config.App.App.URL
+	data.AppName = s.AppConfig.Name
+	data.AppURL = s.AppConfig.URL
 
 	// Load template
 	templatePath := filepath.Join("pkg", "email", "templates", templateName)
@@ -161,7 +163,7 @@ func (s *EmailService) SendWelcomeEmail(name, email, verificationURL string) err
 		return err
 	}
 
-	subject := fmt.Sprintf("Welcome to %s!", config.App.App.Name)
+	subject := fmt.Sprintf("Welcome to %s!", s.AppConfig.Name)
 	return s.SendEmail(email, subject, htmlBody)
 }
 
