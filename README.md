@@ -27,11 +27,7 @@ Production-ready backend boilerplate menggunakan **Golang**, **Fiber**, **Postgr
 - ✅ Password changed confirmation email
 - ✅ Resend verification email
 - ✅ Async email sending
-- ✅ Professional HTML templates:
-  - `welcome.html`
-  - `verifyEmail.html`
-  - `resetPassword.html`
-  - `passwordChanged.html`
+- ✅ Professional HTML templates
 
 ### 🛡️ Security Enhancement
 - ✅ Security headers middleware, setara Helmet.js
@@ -61,16 +57,7 @@ Production-ready backend boilerplate menggunakan **Golang**, **Fiber**, **Postgr
 - ✅ Automatic cache invalidation middleware
 - ✅ Pattern-based cache deletion
 - ✅ Cache warm-up helper
-- ✅ Cache operations:
-  - `Get`
-  - `Set`
-  - `Del`
-  - `DelPattern`
-  - `Exists`
-  - `Flush`
-  - `GetStats`
-  - `InvalidateByPrefix`
-  - `WarmCache`
+- ✅ Cache operations
 - ✅ Gzip response compression
 - ✅ Compression level options: default, best compression, best speed
 
@@ -103,21 +90,12 @@ Production-ready backend boilerplate menggunakan **Golang**, **Fiber**, **Postgr
 - ✅ Database connection status checks
 - ✅ Soft delete support via GORM
 - ✅ Automatic timestamps: `created_at`, `updated_at`
-- ✅ User model with:
-  - Email uniqueness
-  - Role
-  - Email verification status
-  - Email verification token
-  - Password reset token
-  - Last login timestamp
+- ✅ User model
 
 ### 🐳 Docker & DevOps
 - ✅ Multi-stage Dockerfile
 - ✅ Docker Compose support
-- ✅ 3-service orchestration:
-  - API
-  - PostgreSQL
-  - Redis
+- ✅ 3-service orchestration
 - ✅ PostgreSQL data persistence
 - ✅ Redis data persistence
 - ✅ Health checks for PostgreSQL and Redis
@@ -127,13 +105,7 @@ Production-ready backend boilerplate menggunakan **Golang**, **Fiber**, **Postgr
 
 ### 🧱 Architecture
 - ✅ Clean Architecture inspired structure
-- ✅ Separation of concerns:
-  - Controllers
-  - Services
-  - Repositories
-  - Models
-  - Middleware
-  - Utilities
+- ✅ Separation of concerns
 - ✅ Standardized API responses
 - ✅ Centralized error handling
 - ✅ Reusable utilities
