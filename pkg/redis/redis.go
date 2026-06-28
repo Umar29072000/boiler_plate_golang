@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"boiler_plate_be_golang/internal/config"
 	"context"
 	"fmt"
 	"log"
@@ -13,18 +12,26 @@ import (
 var Client *redis.Client
 var ctx = context.Background()
 
-// Connect initializes Redis connection
-func Connect() error {
+// RedisConfig represents Redis configuration
+type RedisConfig struct {
+	Host     string
+	Port     string
+	Password string
+	DB       int
+}
+
+// Connect initializes Redis connection with provided config
+func Connect(cfg RedisConfig) error {
 	// Skip Redis if not configured
-	if config.App.Redis.Host == "" {
+	if cfg.Host == "" {
 		log.Println("Redis not configured, skipping Redis connection")
 		return nil
 	}
 
 	Client = redis.NewClient(&redis.Options{
-		Addr:         fmt.Sprintf("%s:%s", config.App.Redis.Host, config.App.Redis.Port),
-		Password:     config.App.Redis.Password,
-		DB:           config.App.Redis.DB,
+		Addr:         fmt.Sprintf("%s:%s", cfg.Host, cfg.Port),
+		Password:     cfg.Password,
+		DB:           cfg.DB,
 		DialTimeout:  5 * time.Second,
 		ReadTimeout:  3 * time.Second,
 		WriteTimeout: 3 * time.Second,

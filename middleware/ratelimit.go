@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"boiler_plate_be_golang/internal/config"
 	"boiler_plate_be_golang/pkg/redis"
 	"boiler_plate_be_golang/pkg/utils"
 	"fmt"
@@ -131,14 +130,6 @@ func handleMemoryRateLimit(c *fiber.Ctx, clientIP string, cfg RateLimiterConfig)
 	}
 
 	return c.Next()
-}
-
-// DefaultRateLimiter creates rate limiter with default config from env
-func DefaultRateLimiter() fiber.Handler {
-	return RateLimiter(RateLimiterConfig{
-		Max:      config.App.RateLimit.Max,
-		Duration: config.App.RateLimit.Duration,
-	})
 }
 
 func max(a, b int) int {
