@@ -9,11 +9,13 @@ import (
 )
 
 type Config struct {
-	App      AppConfig
-	Database DatabaseConfig
-	JWT      JWTConfig
-	CORS     CORSConfig
-	Email    EmailConfig
+	App       AppConfig
+	Database  DatabaseConfig
+	JWT       JWTConfig
+	CORS      CORSConfig
+	Email     EmailConfig
+	Redis     RedisConfig
+	RateLimit RateLimitConfig
 }
 
 type AppConfig struct {
@@ -48,6 +50,18 @@ type EmailConfig struct {
 	Port     string
 	Username string
 	Password string
+}
+
+type RedisConfig struct {
+	Host     string
+	Port     string
+	Password string
+	DB       int
+}
+
+type RateLimitConfig struct {
+	Max      int
+	Duration time.Duration
 }
 
 var App *Config
@@ -94,6 +108,16 @@ func Load() error {
 			Username: getEnv("EMAIL_USERNAME", ""),
 			Password: getEnv("EMAIL_PASSWORD", ""),
 		},
+		Redis: RedisConfig{
+			Host:     getEnv("REDIS_HOST", ""),
+			Port:     getEnv("REDIS_PORT", "6379"),
+			Password: getEnv("REDIS_PASSWORD", ""),
+			DB:       getEnvInt("REDIS_DB", 0),
+		},
+		RateLimit: RateLimitConfig{
+			Max:      getEnvInt("RATE_LIMIT_MAX", 100),
+			Duration: parseDuration(getEnv("RATE_LIMIT_DURATION", "15m"), 15*time.Minute),
+		},
 	}
 
 	return nil
@@ -117,6 +141,26 @@ func (c *DatabaseConfig) GetDSN() string {
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
+	}
+	return defaultValue
+}
+
+// getEnvInt gets environment variable as integer with fallback
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intVal, err := fmt.Sscanf(value, "%d", new(int)); err == nil && intVal == 1 {
+			var result int
+			fmt.Sscanf(value, "%d", &result)
+			return result
+		}
+	}
+	return defaultValue
+}
+
+// parseDuration parses duration with fallback
+func parseDuration(value string, defaultValue time.Duration) time.Duration {
+	if duration, err := time.ParseDuration(value); err == nil {
+		return duration
 	}
 	return defaultValue
 }

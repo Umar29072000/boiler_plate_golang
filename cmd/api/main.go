@@ -6,6 +6,7 @@ import (
 	"boiler_plate_be_golang/internal/database/migrations"
 	"boiler_plate_be_golang/internal/middleware"
 	"boiler_plate_be_golang/internal/routes"
+	"boiler_plate_be_golang/pkg/redis"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,6 +25,12 @@ func main() {
 	}
 	defer database.Close()
 
+	// Connect to Redis (optional, non-fatal)
+	if err := redis.Connect(); err != nil {
+		log.Printf("Warning: Redis connection failed: %v", err)
+	}
+	defer redis.Close()
+
 	// Run migrations
 	if err := migrations.Migrate(database.GetDB()); err != nil {
 		log.Fatal("Failed to run migrations:", err)
@@ -38,7 +45,11 @@ func main() {
 	// Global middleware
 	app.Use(recover.New())
 	app.Use(middleware.Logger())
+	app.Use(middleware.SecurityHeaders())
 	app.Use(middleware.CORS())
+	app.Use(middleware.DefaultRateLimiter())
+	app.Use(middleware.XSSProtection())
+	app.Use(middleware.InputSanitizer())
 	app.Use(middleware.ErrorHandler())
 
 	// Setup routes
