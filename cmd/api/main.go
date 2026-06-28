@@ -44,6 +44,7 @@ func main() {
 
 	// Global middleware
 	app.Use(recover.New())
+	app.Use(middleware.Compress())
 	app.Use(middleware.Logger())
 	app.Use(middleware.SecurityHeaders())
 	app.Use(middleware.CORS())

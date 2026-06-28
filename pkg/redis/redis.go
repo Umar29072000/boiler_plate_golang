@@ -110,3 +110,52 @@ func Exists(key string) (bool, error) {
 	result, err := Client.Exists(ctx, key).Result()
 	return result > 0, err
 }
+
+// DelPattern deletes all keys matching a pattern
+func DelPattern(pattern string) (int64, error) {
+	if Client == nil {
+		return 0, fmt.Errorf("redis not connected")
+	}
+
+	var cursor uint64
+	var deleted int64
+
+	for {
+		var keys []string
+		var err error
+		keys, cursor, err = Client.Scan(ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			return deleted, err
+		}
+
+		if len(keys) > 0 {
+			result, err := Client.Del(ctx, keys...).Result()
+			if err != nil {
+				return deleted, err
+			}
+			deleted += result
+		}
+
+		if cursor == 0 {
+			break
+		}
+	}
+
+	return deleted, nil
+}
+
+// FlushDB clears all keys in the current database
+func FlushDB() error {
+	if Client == nil {
+		return fmt.Errorf("redis not connected")
+	}
+	return Client.FlushDB(ctx).Err()
+}
+
+// TTL returns the time to live for a key
+func TTL(key string) (time.Duration, error) {
+	if Client == nil {
+		return 0, fmt.Errorf("redis not connected")
+	}
+	return Client.TTL(ctx, key).Result()
+}
