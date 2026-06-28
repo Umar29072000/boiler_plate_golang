@@ -6,46 +6,20 @@ import (
 	"math"
 
 	"boiler_plate_be_golang/app/config"
+	"boiler_plate_be_golang/domains/dto"
 	"boiler_plate_be_golang/internal/rest/response"
 	model "boiler_plate_be_golang/pkg/model/database"
 
 	"gorm.io/gorm"
 )
 
-// DTOs for repository operations
-type GetUserData struct {
-	Page                  int    `json:"page"`
-	Limit                 int    `json:"limit"`
-	Field                 string `json:"field"`
-	Sort                  string `json:"sort"`
-	Search                string `json:"search"`
-	DisableCalculateTotal string `json:"disableCalculateTotal"`
-	ID                    string `json:"id"`
-	Email                 string `json:"email"`
-	PhoneNumber           string `json:"phoneNumber"`
-}
-
-type CreateUserData struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Role     string `json:"role"`
-}
-
-type UpdateUserData struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
-}
-
 // IUserRepository defines user repository interface
 type IUserRepository interface {
-	Show(ctx context.Context, req GetUserData) (res response.PaginationResponse, err error)
-	Create(ctx context.Context, req CreateUserData) (*model.User, error)
+	Show(ctx context.Context, req dto.GetUserData) (res response.PaginationResponse, err error)
+	Create(ctx context.Context, req dto.CreateUserData) (*model.User, error)
 	FindByEmail(ctx context.Context, email string) (*model.User, error)
 	FindByID(ctx context.Context, id string) (*model.User, error)
-	Update(ctx context.Context, req UpdateUserData) (*model.User, error)
+	Update(ctx context.Context, req dto.UpdateUserData) (*model.User, error)
 	Delete(ctx context.Context, id string) error
 	FindByVerificationToken(ctx context.Context, token string) (*model.User, error)
 	FindByResetToken(ctx context.Context, token string) (*model.User, error)
@@ -66,7 +40,7 @@ func NewUserRepository(db *gorm.DB, appConfig config.App) *UserRepository {
 }
 
 // Show gets users with pagination
-func (r *UserRepository) Show(ctx context.Context, req GetUserData) (res response.PaginationResponse, err error) {
+func (r *UserRepository) Show(ctx context.Context, req dto.GetUserData) (res response.PaginationResponse, err error) {
 	var users []model.User
 	var total int64
 
@@ -125,7 +99,7 @@ func (r *UserRepository) Show(ctx context.Context, req GetUserData) (res respons
 }
 
 // Create creates a new user
-func (r *UserRepository) Create(ctx context.Context, req CreateUserData) (*model.User, error) {
+func (r *UserRepository) Create(ctx context.Context, req dto.CreateUserData) (*model.User, error) {
 	user := &model.User{
 		Name:     req.Name,
 		Email:    req.Email,
@@ -159,7 +133,7 @@ func (r *UserRepository) FindByID(ctx context.Context, id string) (*model.User, 
 }
 
 // Update updates user
-func (r *UserRepository) Update(ctx context.Context, req UpdateUserData) (*model.User, error) {
+func (r *UserRepository) Update(ctx context.Context, req dto.UpdateUserData) (*model.User, error) {
 	var user model.User
 	if err := r.DB.WithContext(ctx).Where("id = ?", req.ID).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

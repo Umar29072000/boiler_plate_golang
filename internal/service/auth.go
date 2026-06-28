@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"boiler_plate_be_golang/app/config"
+	"boiler_plate_be_golang/domains/dto"
 	"boiler_plate_be_golang/internal/repository"
 	model "boiler_plate_be_golang/pkg/model/database"
 
@@ -76,7 +77,7 @@ func (s *AuthService) Register(ctx context.Context, name, email, password string
 	verificationExpires := time.Now().Add(24 * time.Hour)
 
 	// Create user using repository DTO
-	user, err = s.UserRepository.Create(ctx, repository.CreateUserData{
+	user, err = s.UserRepository.Create(ctx, dto.CreateUserData{
 		Name:     name,
 		Email:    email,
 		Password: string(hashedPassword),
@@ -96,7 +97,7 @@ func (s *AuthService) Register(ctx context.Context, name, email, password string
 	user.EmailVerificationExpires = &verificationExpires
 	user.IsEmailVerified = false
 
-	updateReq := repository.UpdateUserData{
+	updateReq := dto.UpdateUserData{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
@@ -163,7 +164,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (user *
 	// Update last login
 	now := time.Now()
 	user.LastLogin = &now
-	updateReq := repository.UpdateUserData{
+	updateReq := dto.UpdateUserData{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
@@ -218,7 +219,7 @@ func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
 	user.EmailVerificationToken = nil
 	user.EmailVerificationExpires = nil
 
-	updateReq := repository.UpdateUserData{
+	updateReq := dto.UpdateUserData{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
@@ -264,7 +265,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string) error {
 	user.PasswordResetToken = &resetToken
 	user.PasswordResetExpires = &resetExpires
 
-	updateReq := repository.UpdateUserData{
+	updateReq := dto.UpdateUserData{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
@@ -326,7 +327,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 	user.PasswordResetToken = nil
 	user.PasswordResetExpires = nil
 
-	updateReq := repository.UpdateUserData{
+	updateReq := dto.UpdateUserData{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,

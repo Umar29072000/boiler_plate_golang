@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"boiler_plate_be_golang/internal/repository"
+	"boiler_plate_be_golang/domains/dto"
 	"boiler_plate_be_golang/internal/rest/request"
 	"boiler_plate_be_golang/internal/rest/response"
 	"boiler_plate_be_golang/internal/service"
@@ -159,7 +159,7 @@ func (h *userHandler) GetAllUsers(c *fiber.Ctx) error {
 	}
 
 	// Call service
-	userData, err := h.UserService.Show(c.Context(), repository.GetUserData{
+	userData, err := h.UserService.Show(c.Context(), dto.GetUserData{
 		Page:                  page,
 		Limit:                 limit,
 		Field:                 req.Field,
@@ -263,7 +263,7 @@ func (h *userHandler) UpdateProfile(c *fiber.Ctx) error {
 	}
 
 	// Update user
-	userData, err := h.UserService.Update(c.Context(), repository.UpdateUserData{
+	userData, err := h.UserService.Update(c.Context(), dto.UpdateUserData{
 		ID:    userID.(string),
 		Name:  req.Name,
 		Email: currentUser.Email,

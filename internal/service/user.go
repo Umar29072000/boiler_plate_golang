@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"boiler_plate_be_golang/domains/dto"
 	"boiler_plate_be_golang/internal/repository"
 	"boiler_plate_be_golang/internal/rest/response"
 	model "boiler_plate_be_golang/pkg/model/database"
@@ -14,9 +15,9 @@ import (
 
 // IUserService defines user service interface
 type IUserService interface {
-	Show(ctx context.Context, req repository.GetUserData) (res response.PaginationResponse, err error)
+	Show(ctx context.Context, req dto.GetUserData) (res response.PaginationResponse, err error)
 	FindByID(ctx context.Context, id string) (user *model.User, err error)
-	Update(ctx context.Context, req repository.UpdateUserData) (user *model.User, err error)
+	Update(ctx context.Context, req dto.UpdateUserData) (user *model.User, err error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -33,7 +34,7 @@ func NewUserService(userRepo repository.IUserRepository) *UserService {
 }
 
 // Show gets users with pagination
-func (s *UserService) Show(ctx context.Context, req repository.GetUserData) (res response.PaginationResponse, err error) {
+func (s *UserService) Show(ctx context.Context, req dto.GetUserData) (res response.PaginationResponse, err error) {
 	var tag string = "internal.service.user.Show."
 
 	data, err := s.UserRepository.Show(ctx, req)
@@ -73,7 +74,7 @@ func (s *UserService) FindByID(ctx context.Context, id string) (user *model.User
 }
 
 // Update updates user profile
-func (s *UserService) Update(ctx context.Context, req repository.UpdateUserData) (user *model.User, err error) {
+func (s *UserService) Update(ctx context.Context, req dto.UpdateUserData) (user *model.User, err error) {
 	var tag string = "internal.service.user.Update."
 
 	// Check if user exists
