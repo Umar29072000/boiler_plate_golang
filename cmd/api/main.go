@@ -6,8 +6,8 @@ import (
 	"boiler_plate_be_golang/internal/database/migrations"
 	"boiler_plate_be_golang/internal/middleware"
 	"boiler_plate_be_golang/internal/routes"
+	"boiler_plate_be_golang/pkg/logger"
 	"boiler_plate_be_golang/pkg/redis"
-	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -16,24 +16,32 @@ import (
 func main() {
 	// Load configuration
 	if err := config.Load(); err != nil {
-		log.Fatal("Failed to load config:", err)
+		logger.Fatal("Failed to load config").Err(err).Send()
 	}
+
+	// Initialize logger (after config is loaded)
+	logger.Init()
+
+	logger.Info("Starting application").
+		Str("app", config.App.App.Name).
+		Str("env", config.App.App.Env).
+		Send()
 
 	// Connect to database
 	if err := database.Connect(); err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		logger.Fatal("Failed to connect to database").Err(err).Send()
 	}
 	defer database.Close()
 
 	// Connect to Redis (optional, non-fatal)
 	if err := redis.Connect(); err != nil {
-		log.Printf("Warning: Redis connection failed: %v", err)
+		logger.Warn("Redis connection failed, using fallback").Err(err).Send()
 	}
 	defer redis.Close()
 
 	// Run migrations
 	if err := migrations.Migrate(database.GetDB()); err != nil {
-		log.Fatal("Failed to run migrations:", err)
+		logger.Fatal("Failed to run migrations").Err(err).Send()
 	}
 
 	// Create Fiber app
@@ -45,7 +53,8 @@ func main() {
 	// Global middleware
 	app.Use(recover.New())
 	app.Use(middleware.Compress())
-	app.Use(middleware.Logger())
+	app.Use(middleware.RequestID())
+	app.Use(middleware.RequestLogger())
 	app.Use(middleware.SecurityHeaders())
 	app.Use(middleware.CORS())
 	app.Use(middleware.DefaultRateLimiter())
@@ -58,12 +67,14 @@ func main() {
 
 	// Start server
 	port := config.App.App.Port
-	log.Printf("Server starting on port %s", port)
-	log.Printf("Environment: %s", config.App.App.Env)
-	log.Printf("URL: %s", config.App.App.URL)
+	logger.Info("Server starting").
+		Str("port", port).
+		Str("environment", config.App.App.Env).
+		Str("url", config.App.App.URL).
+		Send()
 
 	if err := app.Listen(":" + port); err != nil {
-		log.Fatal("Failed to start server:", err)
+		logger.Fatal("Failed to start server").Err(err).Send()
 	}
 }
 
@@ -74,6 +85,11 @@ func customErrorHandler(c *fiber.Ctx, err error) error {
 	if e, ok := err.(*fiber.Error); ok {
 		code = e.Code
 	}
+
+	logger.Error("Handler error").
+		Int("status", code).
+		Err(err).
+		Send()
 
 	return c.Status(code).JSON(fiber.Map{
 		"success": false,

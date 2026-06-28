@@ -19,7 +19,7 @@ Boilerplate backend API menggunakan Golang dengan Fiber framework, siap pakai un
 - ✅ **Docker Support** - Docker dan Docker Compose ready
 - ✅ **Standardized Response** - Response format yang konsisten
 
-## 📁 Struktur Projekt
+## 📁 Struktur Folder
 
 ```
 boiler_plate_be_golang/

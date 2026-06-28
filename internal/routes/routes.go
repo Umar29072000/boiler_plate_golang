@@ -25,17 +25,18 @@ func SetupRoutes(app *fiber.App) {
 	// Controllers
 	authController := controllers.NewAuthController(authService)
 	userController := controllers.NewUserController(userService)
+	healthController := controllers.NewHealthController()
+	metricsController := controllers.NewMetricsController()
 
 	// API routes
 	api := app.Group("/api")
 
-	// Health check
-	api.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"status": "ok",
-			"message": "Server is running",
-		})
-	})
+	// Health check routes
+	api.Get("/health", healthController.BasicHealth)
+	api.Get("/health/detailed", healthController.DetailedHealth)
+	api.Get("/health/ready", healthController.ReadinessProbe)
+	api.Get("/health/live", healthController.LivenessProbe)
+	api.Get("/metrics", metricsController.GetMetrics)
 
 	// Auth routes (public)
 	auth := api.Group("/auth")
