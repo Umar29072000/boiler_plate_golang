@@ -64,3 +64,23 @@ func (r *UserRepository) Count() (int64, error) {
 	err := r.db.Model(&models.User{}).Count(&count).Error
 	return count, err
 }
+
+// FindByVerificationToken finds user by email verification token
+func (r *UserRepository) FindByVerificationToken(token string) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("email_verification_token = ?", token).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// FindByResetToken finds user by password reset token
+func (r *UserRepository) FindByResetToken(token string) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("password_reset_token = ?", token).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}

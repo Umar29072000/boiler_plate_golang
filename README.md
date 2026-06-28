@@ -6,11 +6,18 @@ Boilerplate backend API menggunakan Golang dengan Fiber framework, siap pakai un
 
 - ✅ **Fiber Framework** - Web framework Go yang cepat dan ekspresif
 - ✅ **Clean Architecture** - Struktur kode yang terorganisir (Controllers, Services, Repositories)
-- ✅ **JWT Authentication** - Authentication menggunakan JSON Web Token
+- ✅ **JWT Authentication** - Authentication menggunakan JSON Web Token (7 days expiry)
+- ✅ **Email System** - Complete email functionality with SMTP support
+  - Welcome email with verification link
+  - Email verification (24h expiry)
+  - Password reset email (15min expiry)
+  - Password changed confirmation
+  - 4 professional HTML templates
 - ✅ **Role-based Access Control** - Authorization dengan role (user, admin)
 - ✅ **PostgreSQL Database** - Database relational dengan GORM ORM
 - ✅ **Auto Migration** - Database migration otomatis
-- ✅ **Middleware** - CORS, Logger, Error Handler, Rate Limiter
+- ✅ **Last Login Tracking** - Track user login activity
+- ✅ **Middleware** - CORS, Logger, Error Handler, Auth
 - ✅ **Input Validation** - Validasi input request
 - ✅ **Password Hashing** - Bcrypt password hashing
 - ✅ **Environment Config** - Konfigurasi melalui environment variables
@@ -179,10 +186,74 @@ Response:
       "id": 1,
       "name": "John Doe",
       "email": "john@example.com",
-      "role": "user"
+      "role": "user",
+      "isEmailVerified": true,
+      "lastLogin": "2024-01-15T10:30:00Z"
     },
     "token": "eyJhbGciOiJIUzI1NiIs..."
   }
+}
+```
+
+#### Verify Email
+```
+GET /api/auth/verify-email/:token
+```
+
+Response:
+```json
+{
+  "success": true,
+  "message": "Email verified successfully",
+  "data": null
+}
+```
+
+#### Resend Verification Email
+```
+POST /api/auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+```
+
+#### Forgot Password
+```
+POST /api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "message": "If your email exists in our system, you will receive a password reset link",
+  "data": null
+}
+```
+
+#### Reset Password
+```
+POST /api/auth/reset-password/:token
+Content-Type: application/json
+
+{
+  "password": "newPassword123"
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "message": "Password reset successfully",
+  "data": null
 }
 ```
 
@@ -257,8 +328,43 @@ Konfigurasi aplikasi melalui environment variables di file `.env`:
 | DB_PASSWORD | Database password | postgres |
 | DB_NAME | Database name | fiber_boilerplate |
 | JWT_SECRET | JWT secret key | your-secret-key |
-| JWT_EXPIRATION | Token expiration duration | 24h |
+| JWT_EXPIRATION | Token expiration duration | 168h (7 days) |
 | CORS_ALLOWED_ORIGINS | Allowed origins for CORS | * |
+| EMAIL_FROM | Sender email address | noreply@fiberboilerplate.com |
+| EMAIL_HOST | SMTP host | smtp.ethereal.email |
+| EMAIL_PORT | SMTP port | 587 |
+| EMAIL_USERNAME | SMTP username | (empty) |
+| EMAIL_PASSWORD | SMTP password | (empty) |
+
+### 📧 Email Configuration
+
+#### Development (Ethereal Email)
+For testing emails in development, use [Ethereal Email](https://ethereal.email):
+1. Visit https://ethereal.email
+2. Create a test account
+3. Copy credentials to `.env`:
+```env
+EMAIL_HOST=smtp.ethereal.email
+EMAIL_PORT=587
+EMAIL_USERNAME=your-ethereal-username@ethereal.email
+EMAIL_PASSWORD=your-ethereal-password
+```
+
+#### Production (Gmail)
+```env
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USERNAME=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+```
+
+#### Production (SendGrid)
+```env
+EMAIL_HOST=smtp.sendgrid.net
+EMAIL_PORT=587
+EMAIL_USERNAME=apikey
+EMAIL_PASSWORD=your-sendgrid-api-key
+```
 
 ## 🧪 Testing dengan cURL
 

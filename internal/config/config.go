@@ -13,6 +13,7 @@ type Config struct {
 	Database DatabaseConfig
 	JWT      JWTConfig
 	CORS     CORSConfig
+	Email    EmailConfig
 }
 
 type AppConfig struct {
@@ -39,6 +40,14 @@ type JWTConfig struct {
 
 type CORSConfig struct {
 	AllowedOrigins string
+}
+
+type EmailConfig struct {
+	From     string
+	Host     string
+	Port     string
+	Username string
+	Password string
 }
 
 var App *Config
@@ -77,6 +86,13 @@ func Load() error {
 		},
 		CORS: CORSConfig{
 			AllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "*"),
+		},
+		Email: EmailConfig{
+			From:     getEnv("EMAIL_FROM", "noreply@fiberboilerplate.com"),
+			Host:     getEnv("EMAIL_HOST", "smtp.ethereal.email"),
+			Port:     getEnv("EMAIL_PORT", "587"),
+			Username: getEnv("EMAIL_USERNAME", ""),
+			Password: getEnv("EMAIL_PASSWORD", ""),
 		},
 	}
 
