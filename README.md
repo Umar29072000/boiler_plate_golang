@@ -1,114 +1,63 @@
-﻿# Fiber Boilerplate - Golang Backend
+# Fiber Boilerplate - Golang Backend
 
-Production-ready backend boilerplate menggunakan **Golang**, **Fiber**, **PostgreSQL**, **GORM**, dan **Redis**. Boilerplate ini dirancang dengan clean architecture, authentication lengkap, email system, security hardening, caching, performance optimization, monitoring, logging, Docker support, dan standardized API response.
+Backend boilerplate menggunakan **Golang**, **Fiber**, **PostgreSQL**, **GORM**, dan **Redis**. Boilerplate ini dirancang dengan clean architecture, authentication lengkap, email system, security hardening, caching, performance optimization, monitoring, logging, Docker support, dan standardized API response.
+
+Project ini menggunakan CLI berbasis Cobra. REST server dijalankan melalui command `rest`.
+
+---
 
 ## 🚀 Feature Overview
 
 ### 🔐 Authentication & Authorization
-- ✅ JWT Authentication menggunakan single access token
-- ✅ Token expiry default: `7 days` (`168h`)
-- ✅ JWT verification middleware
-- ✅ Password hashing menggunakan Bcrypt
-- ✅ Password comparison helper
-- ✅ Last login tracking
-- ✅ Role-Based Access Control (RBAC)
-- ✅ Role tersedia: `user`, `admin`
-- ✅ Auth/protect middleware
-- ✅ Admin authorization middleware
-- ✅ Route-level protection
+- JWT authentication dengan **single token**.
+- Token expiry default: `168h` / 7 hari.
+- Register dan login mengembalikan response `{ user, token }`.
+- Password hashing menggunakan Bcrypt.
+- Last login tracking.
+- Auth middleware dengan `Authorization: Bearer <token>`.
+- Admin middleware berbasis role `admin`.
 
-### 📧 Email System
-- ✅ SMTP email service
-- ✅ Development email testing via Ethereal Email
-- ✅ Production SMTP support: Gmail, SendGrid, Mailgun, dan SMTP lainnya
-- ✅ Welcome email setelah registration
-- ✅ Email verification token dengan expiry 24 jam
-- ✅ Password reset token dengan expiry 15 menit
-- ✅ Password changed confirmation email
-- ✅ Resend verification email
-- ✅ Async email sending
-- ✅ Professional HTML templates
+### ✅ Request Validation
+- Request validation menggunakan `ozzo-validation`.
+- Request DTO berada di `internal/rest/request`.
+- Validation dipanggil dari handler dengan pattern `req.Validate()`.
+- Response invalid validation menggunakan message `INVALID_VALIDATION`.
 
-### 🛡️ Security Enhancement
-- ✅ Security headers middleware, setara Helmet.js
-- ✅ XSS protection headers
-- ✅ Clickjacking protection
-- ✅ MIME sniffing protection
-- ✅ DNS prefetch control
-- ✅ Referrer policy
-- ✅ Permissions policy
-- ✅ CORS configurable by environment
-- ✅ Redis-backed distributed rate limiting
-- ✅ Memory fallback jika Redis tidak tersedia
-- ✅ Default rate limit: 100 requests per 15 minutes
-- ✅ Rate limit response headers
-- ✅ XSS input protection
-- ✅ Input sanitization
-- ✅ SQL injection pattern defense-in-depth
-- ✅ `.env` excluded by `.gitignore`
+### 📦 DTO & Domain Organization
+- Domain model/response berada di `domains/`.
+- DTO data flow service/repository berada di `domains/dto/`.
 
-### ⚡ Caching & Performance
-- ✅ Redis cache integration
-- ✅ High-level cache service
-- ✅ Response caching middleware for GET requests
-- ✅ Configurable cache TTL
-- ✅ Cache hit/miss response header: `X-Cache`
-- ✅ Cache hit/miss statistics support
-- ✅ Automatic cache invalidation middleware
-- ✅ Pattern-based cache deletion
-- ✅ Cache warm-up helper
-- ✅ Cache operations
-- ✅ Gzip response compression
-- ✅ Compression level options: default, best compression, best speed
+### 🧱 Architecture Pattern
+- Fiber tetap digunakan sebagai HTTP framework.
+- Pattern handler/service/repository mengikuti style `star-fruit`.
 
-### 🏥 Monitoring & Logging
-- ✅ Enhanced health checks
-- ✅ Basic health endpoint
-- ✅ Detailed health endpoint
-- ✅ Kubernetes-style readiness probe
-- ✅ Kubernetes-style liveness probe
-- ✅ DB connection status monitoring
-- ✅ Redis connection status monitoring
-- ✅ Server uptime tracking
-- ✅ Runtime metrics endpoint
-- ✅ Go runtime memory metrics
-- ✅ Goroutine count
-- ✅ GC metrics
-- ✅ Structured logging with Zerolog
-- ✅ Pretty console logs in development
-- ✅ JSON logs in production
-- ✅ Request ID middleware
-- ✅ `X-Request-ID` response header
-- ✅ Structured request/response logging
-- ✅ Logs method, path, IP, user-agent, status, duration, response size, and errors
+### 🪵 Logging
+- Structured logging menggunakan Logrus.
+- Setiap flow penting memakai tag.
+- Middleware request logging tersedia.
+
+### 🛡️ Security Middleware
+- Security headers middleware.
+- CORS configurable via env.
+- Rate limiter dengan Redis dan fallback memory.
+- Compression middleware.
+- Recover middleware.
+- Request ID middleware.
 
 ### 🗄️ Database & ORM
-- ✅ PostgreSQL database
-- ✅ GORM ORM
-- ✅ Auto migration
-- ✅ Graceful DB close
-- ✅ Database connection status checks
-- ✅ Soft delete support via GORM
-- ✅ Automatic timestamps: `created_at`, `updated_at`
-- ✅ User model
+- PostgreSQL.
+- GORM ORM.
+- Auto migration optional via `DB_MIGRATE=yes`.
+- User model dengan soft delete dan timestamps.
 
-### 🐳 Docker & DevOps
-- ✅ Multi-stage Dockerfile
-- ✅ Docker Compose support
-- ✅ 3-service orchestration
-- ✅ PostgreSQL data persistence
-- ✅ Redis data persistence
-- ✅ Health checks for PostgreSQL and Redis
-- ✅ Automatic service dependency health checks
-- ✅ Restart policies
-- ✅ Environment-based configuration
+### ⚡ Redis, Cache, Email
+- Redis client tersedia.
+- Cache package tersedia di `pkg/cache`.
+- SMTP email package dan HTML templates tersedia di `pkg/email`.
 
-### 🧱 Architecture
-- ✅ Clean Architecture inspired structure
-- ✅ Separation of concerns
-- ✅ Standardized API responses
-- ✅ Centralized error handling
-- ✅ Reusable utilities
+### 🐳 Docker
+- Dockerfile dan Docker Compose tersedia.
+- Docker Compose menyediakan PostgreSQL, Redis, dan API service.
 
 ---
 
@@ -116,65 +65,59 @@ Production-ready backend boilerplate menggunakan **Golang**, **Fiber**, **Postgr
 
 ```text
 boiler_plate_be_golang/
-├── cmd/
-│   └── api/
-│       └── main.go
+├── app/
+│   ├── main.go
+│   ├── cmd/
+│   │   ├── root.go
+│   │   └── rest.go
+│   └── config/
+│       ├── app.go
+│       ├── email.go
+│       ├── jwt.go
+│       ├── postgres.go
+│       ├── redis.go
+│       └── root.go
+├── domains/
+│   ├── auth.go
+│   ├── user.go
+│   └── dto/
+│       └── user.go
 ├── internal/
-│   ├── config/
-│   │   └── config.go
-│   ├── controllers/
-│   │   ├── auth.go
-│   │   ├── health.go
-│   │   ├── metrics.go
-│   │   └── user.go
 │   ├── database/
-│   │   ├── database.go
 │   │   └── migrations/
 │   │       └── migrate.go
-│   ├── middleware/
+│   ├── repository/
+│   │   └── user.go
+│   ├── rest/
 │   │   ├── auth.go
-│   │   ├── cacheresp.go
-│   │   ├── compress.go
-│   │   ├── cors.go
-│   │   ├── error.go
-│   │   ├── logger.go
-│   │   ├── ratelimit.go
-│   │   ├── requestlog.go
-│   │   ├── sanitize.go
-│   │   └── security.go
-│   ├── models/
-│   │   ├── base.go
-│   │   └── user.go
-│   ├── repositories/
-│   │   └── user.go
-│   ├── routes/
-│   │   └── routes.go
-│   └── services/
+│   │   ├── health.go
+│   │   ├── user.go
+│   │   ├── request/
+│   │   │   ├── auth.go
+│   │   │   ├── base.go
+│   │   │   ├── pagination.go
+│   │   │   └── user.go
+│   │   └── response/
+│   │       └── response.go
+│   └── service/
 │       ├── auth.go
 │       └── user.go
+├── middleware/
+│   ├── auth.go
+│   ├── compress.go
+│   ├── ratelimit.go
+│   ├── requestlog.go
+│   └── security.go
 ├── pkg/
 │   ├── cache/
-│   │   └── cache.go
+│   ├── constant/
 │   ├── email/
-│   │   ├── email.go
-│   │   └── templates/
-│   │       ├── passwordChanged.html
-│   │       ├── resetPassword.html
-│   │       ├── verifyEmail.html
-│   │       └── welcome.html
 │   ├── logger/
-│   │   └── logger.go
+│   ├── model/
 │   ├── redis/
-│   │   └── redis.go
 │   ├── utils/
-│   │   ├── jwt.go
-│   │   ├── password.go
-│   │   ├── response.go
-│   │   └── token.go
 │   └── validator/
-│       └── validator.go
 ├── .env.example
-├── .gitignore
 ├── Dockerfile
 ├── docker-compose.yml
 ├── go.mod
@@ -188,14 +131,14 @@ boiler_plate_be_golang/
 
 - Go 1.22+
 - PostgreSQL 14+
-- Redis 7+ optional, tapi direkomendasikan
+- Redis 7+ optional, direkomendasikan untuk rate limiter/cache
 - Docker & Docker Compose optional
 
 ---
 
 ## ⚙️ Environment Variables
 
-Copy file `.env.example` menjadi `.env`:
+Copy `.env.example` menjadi `.env`:
 
 ```bash
 cp .env.example .env
@@ -204,13 +147,11 @@ cp .env.example .env
 Konfigurasi utama:
 
 ```env
-# Application
 APP_NAME=Fiber Boilerplate
 APP_ENV=development
 APP_PORT=3000
 APP_URL=http://localhost:3000
 
-# Database
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
@@ -219,30 +160,27 @@ DB_NAME=fiber_boilerplate
 DB_SSL_MODE=disable
 DB_TIMEZONE=Asia/Jakarta
 
-# JWT
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 JWT_EXPIRATION=168h
 
-# CORS
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
-# Email
 EMAIL_FROM=noreply@fiberboilerplate.com
 EMAIL_HOST=smtp.ethereal.email
 EMAIL_PORT=587
 EMAIL_USERNAME=your-ethereal-username
 EMAIL_PASSWORD=your-ethereal-password
 
-# Redis
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
 REDIS_DB=0
 
-# Rate Limiting
 RATE_LIMIT_MAX=100
 RATE_LIMIT_DURATION=15m
 ```
+
+> Set `DB_MIGRATE=yes` jika ingin menjalankan auto migration saat aplikasi start.
 
 ---
 
@@ -256,16 +194,14 @@ go mod download
 
 ### 2. Setup Database
 
-Buat database PostgreSQL:
-
 ```sql
 CREATE DATABASE fiber_boilerplate;
 ```
 
-### 3. Run App
+### 3. Run REST Server
 
 ```bash
-go run cmd/api/main.go
+go run ./app rest --env .env
 ```
 
 Server berjalan di:
@@ -274,11 +210,23 @@ Server berjalan di:
 http://localhost:3000
 ```
 
+Base API path:
+
+```text
+/api/v1
+```
+
 ### 4. Build Binary
 
 ```bash
-go build -o main.exe cmd/api/main.go
-./main.exe
+go build -o app.exe ./app
+./app.exe rest --env .env
+```
+
+Windows PowerShell:
+
+```powershell
+.\app.exe rest --env .env
 ```
 
 ---
@@ -292,7 +240,7 @@ docker-compose up -d
 Services:
 
 | Service | URL/Port |
-|---------|----------|
+|---|---|
 | API | `http://localhost:3000` |
 | PostgreSQL | `localhost:5432` |
 | Redis | `localhost:6379` |
@@ -319,38 +267,28 @@ docker-compose down -v
 
 ## 📡 API Endpoints
 
-### Health & Monitoring
+Semua endpoint berada di prefix:
+
+```text
+/api/v1
+```
+
+### Health
 
 #### Basic Health
 
 ```http
-GET /api/health
-```
-
-#### Detailed Health
-
-```http
-GET /api/health/detailed
+GET /api/v1/health
 ```
 
 Example response:
 
 ```json
 {
-  "status": "OK",
-  "timestamp": "2026-06-28T17:00:00Z",
-  "uptime": "10m15s",
-  "environment": "development",
-  "version": "Fiber Boilerplate",
-  "services": {
-    "database": {
-      "status": "healthy",
-      "type": "PostgreSQL"
-    },
-    "redis": {
-      "status": "healthy",
-      "type": "Redis"
-    }
+  "code": 200,
+  "message": "OK",
+  "data": {
+    "status": "healthy"
   }
 }
 ```
@@ -358,19 +296,13 @@ Example response:
 #### Readiness Probe
 
 ```http
-GET /api/health/ready
+GET /api/v1/health/ready
 ```
 
 #### Liveness Probe
 
 ```http
-GET /api/health/live
-```
-
-#### Metrics
-
-```http
-GET /api/metrics
+GET /api/v1/health/live
 ```
 
 ---
@@ -380,57 +312,87 @@ GET /api/metrics
 #### Register
 
 ```http
-POST /api/auth/register
+POST /api/v1/auth/register
 Content-Type: application/json
 ```
+
+Request:
 
 ```json
 {
   "name": "John Doe",
   "email": "john@example.com",
-  "password": "password123"
+  "password": "Password123"
+}
+```
+
+Success response:
+
+```json
+{
+  "code": 201,
+  "message": "USER_REGISTERED",
+  "data": {
+    "user": {
+      "id": "uuid",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "user",
+      "isEmailVerified": false
+    },
+    "token": "jwt-token"
+  }
 }
 ```
 
 #### Login
 
 ```http
-POST /api/auth/login
+POST /api/v1/auth/login
 Content-Type: application/json
 ```
+
+Request:
 
 ```json
 {
   "email": "john@example.com",
-  "password": "password123"
+  "password": "Password123"
+}
+```
+
+Success response:
+
+```json
+{
+  "code": 200,
+  "message": "LOGIN_SUCCESS",
+  "data": {
+    "user": {
+      "id": "uuid",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "user"
+    },
+    "token": "jwt-token"
+  }
 }
 ```
 
 #### Verify Email
 
 ```http
-GET /api/auth/verify-email/:token
-```
-
-#### Resend Verification Email
-
-```http
-POST /api/auth/resend-verification
-Content-Type: application/json
-```
-
-```json
-{
-  "email": "john@example.com"
-}
+GET /api/v1/auth/verify/:token
 ```
 
 #### Forgot Password
 
 ```http
-POST /api/auth/forgot-password
+POST /api/v1/auth/forgot-password
 Content-Type: application/json
 ```
+
+Request:
 
 ```json
 {
@@ -441,19 +403,24 @@ Content-Type: application/json
 #### Reset Password
 
 ```http
-POST /api/auth/reset-password/:token
+POST /api/v1/auth/reset-password
 Content-Type: application/json
 ```
 
+Request:
+
 ```json
 {
-  "password": "newPassword123"
+  "token": "reset-token",
+  "newPassword": "NewPassword123"
 }
 ```
 
+> Tidak ada endpoint `/auth/refresh` karena authentication menggunakan single token.
+
 ---
 
-### User Management Protected
+### User Management
 
 Gunakan header:
 
@@ -464,15 +431,17 @@ Authorization: Bearer <token>
 #### Get Profile
 
 ```http
-GET /api/users/profile
+GET /api/v1/users/profile
 ```
 
 #### Update Profile
 
 ```http
-PUT /api/users/profile
+PUT /api/v1/users/profile
 Content-Type: application/json
 ```
+
+Request:
 
 ```json
 {
@@ -480,16 +449,16 @@ Content-Type: application/json
 }
 ```
 
-#### Get All Users Admin Only
+#### Get All Users
 
 ```http
-GET /api/users?page=1&limit=10
+GET /api/v1/users?page=1&limit=10&search=john&field=createdAt&sort=desc
 ```
 
-#### Delete User Admin Only
+#### Delete User
 
 ```http
-DELETE /api/users/:id
+DELETE /api/v1/users/:id
 ```
 
 ---
@@ -499,205 +468,214 @@ DELETE /api/users/:id
 ### Health
 
 ```bash
-curl http://localhost:3000/api/health
-curl http://localhost:3000/api/health/detailed
-curl http://localhost:3000/api/metrics
+curl http://localhost:3000/api/v1/health
+curl http://localhost:3000/api/v1/health/ready
+curl http://localhost:3000/api/v1/health/live
 ```
 
 ### Register
 
 ```bash
-curl -X POST http://localhost:3000/api/auth/register \
+curl -X POST http://localhost:3000/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"name":"Test User","email":"test@example.com","password":"password123"}'
+  -d '{"name":"Test User","email":"test@example.com","password":"Password123"}'
 ```
 
 ### Login
 
 ```bash
-curl -X POST http://localhost:3000/api/auth/login \
+curl -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
+  -d '{"email":"test@example.com","password":"Password123"}'
 ```
 
 ### Get Profile
 
 ```bash
-curl -X GET http://localhost:3000/api/users/profile \
+curl -X GET http://localhost:3000/api/v1/users/profile \
   -H "Authorization: Bearer <token>"
 ```
 
-### Test Security Headers
+### Update Profile
 
 ```bash
-curl -I http://localhost:3000/api/health
+curl -X PUT http://localhost:3000/api/v1/users/profile \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Updated Name"}'
 ```
 
-### Test Compression
+### Get Users
 
 ```bash
-curl -H "Accept-Encoding: gzip" -I http://localhost:3000/api/health
-```
-
-### Test Rate Limit
-
-```bash
-for i in {1..101}; do curl http://localhost:3000/api/health; done
+curl -X GET "http://localhost:3000/api/v1/users?page=1&limit=10" \
+  -H "Authorization: Bearer <token>"
 ```
 
 ---
 
-## 📧 Email Setup
+## 📤 Standard Response
 
-### Development with Ethereal
-
-1. Buka https://ethereal.email
-2. Buat test account
-3. Masukkan credential ke `.env`
-
-```env
-EMAIL_HOST=smtp.ethereal.email
-EMAIL_PORT=587
-EMAIL_USERNAME=your-ethereal-username@ethereal.email
-EMAIL_PASSWORD=your-ethereal-password
-```
-
-### Production with Gmail
-
-```env
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USERNAME=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
-```
-
-### Production with SendGrid
-
-```env
-EMAIL_HOST=smtp.sendgrid.net
-EMAIL_PORT=587
-EMAIL_USERNAME=apikey
-EMAIL_PASSWORD=your-sendgrid-api-key
-```
-
----
-
-## ⚡ Cache Usage Example
-
-```go
-api.Get("/products",
-    middleware.Cache(middleware.CacheConfig{
-        TTL: 10 * time.Minute,
-    }),
-    getProductsHandler,
-)
-
-api.Post("/products",
-    middleware.Auth(),
-    middleware.InvalidateCache("GET:/api/products"),
-    createProductHandler,
-)
-```
-
-Manual cache service:
-
-```go
-cacheService := cache.NewCacheService(5 * time.Minute)
-cacheService.Set("user:1", user, 10*time.Minute)
-
-var cachedUser User
-cacheService.Get("user:1", &cachedUser)
-```
-
----
-
-## 🪵 Logging
-
-Development mode menghasilkan pretty console logs.
-
-Production mode menghasilkan JSON logs yang cocok untuk log aggregator seperti:
-
-- ELK Stack
-- Grafana Loki
-- Datadog
-- CloudWatch
-- Google Cloud Logging
-
-Contoh structured log:
+### Base Response
 
 ```json
 {
-  "level": "info",
-  "request_id": "uuid",
-  "method": "GET",
-  "path": "/api/health",
-  "status": 200,
-  "duration": 1200000,
-  "message": "Request completed"
+  "code": 200,
+  "message": "SUCCESS",
+  "data": {}
+}
+```
+
+### Pagination Data
+
+```json
+{
+  "code": 200,
+  "message": "SUCCESS",
+  "data": {
+    "items": [],
+    "totalItems": 0,
+    "totalPages": 0,
+    "page": 1,
+    "limit": 10
+  }
+}
+```
+
+### Validation Error
+
+```json
+{
+  "code": 400,
+  "message": "INVALID_VALIDATION",
+  "data": {
+    "field": "error message"
+  }
 }
 ```
 
 ---
 
-## 🔐 Security Headers
+## 🪵 Logging Pattern
 
-Middleware security menambahkan header berikut:
+Pattern logging mengikuti style tag bertingkat:
 
-- `X-XSS-Protection`
-- `X-Content-Type-Options`
-- `X-Frame-Options`
-- `X-DNS-Prefetch-Control`
-- `Referrer-Policy`
-- `Permissions-Policy`
+```go
+var tag string = "internal.rest.auth.Login."
+
+logrus.WithFields(logrus.Fields{
+    "tag":   tag + "01",
+    "error": err.Error(),
+}).Error("bad request")
+```
+
+Contoh tag:
+
+| Layer | Example Tag |
+|---|---|
+| REST | `internal.rest.auth.Login.01` |
+| Service | `internal.service.auth.Login.03` |
+| Repository | `internal.repository.user.Show.01` |
+
+---
+
+## 🧭 Development Guide
+
+### Add New Feature Module
+
+1. Tambahkan domain/entity di `domains/`.
+2. Tambahkan DTO flow di `domains/dto/` jika dibutuhkan.
+3. Tambahkan request struct dan `Validate()` di `internal/rest/request/`.
+4. Tambahkan response struct khusus di `internal/rest/response/` jika dibutuhkan.
+5. Buat repository di `internal/repository/`.
+6. Buat service di `internal/service/`.
+7. Buat handler di `internal/rest/`.
+8. Register handler di `app/cmd/rest.go`.
+
+### Handler Pattern
+
+```go
+type exampleHandler struct {
+    ExampleService service.IExampleService
+}
+
+func (h *exampleHandler) Create(c *fiber.Ctx) error {
+    var (
+        tag string = "internal.rest.example.Create."
+        req request.CreateExampleRequest
+    )
+
+    if err := c.BodyParser(&req); err != nil {
+        logrus.WithFields(logrus.Fields{
+            "tag":   tag + "01",
+            "error": err.Error(),
+        }).Error("bad request")
+        return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+            Code:    http.StatusBadRequest,
+            Message: "BAD_REQUEST",
+        })
+    }
+
+    if err := req.Validate(); err != nil {
+        return c.Status(http.StatusBadRequest).JSON(response.BaseResponse{
+            Code:    http.StatusBadRequest,
+            Message: "INVALID_VALIDATION",
+            Data:    err,
+        })
+    }
+
+    return c.Status(http.StatusOK).JSON(response.BaseResponse{
+        Code:    http.StatusOK,
+        Message: "SUCCESS",
+    })
+}
+```
+
+### Protected Route
+
+```go
+users := api.Group("/users")
+users.Use(middleware.Auth())
+users.Get("/profile", handler.GetProfile)
+```
+
+### Admin Route
+
+```go
+users.Get("/", middleware.AdminOnly(), handler.GetAllUsers)
+```
 
 ---
 
 ## 📦 Main Dependencies
 
 - [Fiber](https://github.com/gofiber/fiber)
+- [Cobra](https://github.com/spf13/cobra)
 - [GORM](https://gorm.io/)
 - [PostgreSQL Driver](https://gorm.io/docs/connecting_to_the_database.html)
 - [go-redis](https://github.com/redis/go-redis)
 - [JWT](https://github.com/golang-jwt/jwt)
 - [Bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt)
+- [Logrus](https://github.com/sirupsen/logrus)
+- [Zerolog](https://github.com/rs/zerolog)
+- [Ozzo Validation](https://github.com/go-ozzo/ozzo-validation)
 - [godotenv](https://github.com/joho/godotenv)
-- [zerolog](https://github.com/rs/zerolog)
 
 ---
 
-## 🧭 Development Guide
+## ✅ Verification
 
-### Add New Model
+Build aplikasi:
 
-1. Buat model di `internal/models/`
-2. Tambahkan model ke `internal/database/migrations/migrate.go`
-3. Buat repository di `internal/repositories/`
-4. Buat service di `internal/services/`
-5. Buat controller di `internal/controllers/`
-6. Register route di `internal/routes/routes.go`
-
-### Add Protected Route
-
-```go
-users := api.Group("/users")
-users.Use(middleware.Auth())
-users.Get("/profile", userController.GetProfile)
+```bash
+go build -o app.exe ./app
 ```
 
-### Add Admin Route
+Run server:
 
-```go
-users.Get("/", middleware.AdminOnly(), userController.GetAllUsers)
+```bash
+./app.exe rest --env .env
 ```
-
----
-
-## ✅ Roadmap Status
-
-- ✅ Phase 1: Email System
-- ✅ Phase 2: Security Enhancement
-- ✅ Phase 3: Caching & Performance
-- ✅ Phase 4: Monitoring & Logging
 
 ---
 
